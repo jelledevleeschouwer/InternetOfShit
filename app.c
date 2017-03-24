@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 #include "mcp3008.h"
-#include "servkit.h"
+#include "libquickserv.h"
 
 /* Utilities */
 #define EVER                    (;;)
@@ -50,28 +50,28 @@ static int seat_pressure_tresh = 0;
 static time_t poll_timeout = 0;
 static char *server_path = NULL;
 
-static SERVKIT_SERVER server = NULL;
-static SERVKIT_CLIENT client = NULL;
+static QUICKSERV_SERVER server = NULL;
+static QUICKSERV_CLIENT client = NULL;
 
 /* Callback when new client is accepted */
-static void client_accept(SERVKIT_CLIENT __client)
+static void client_accept(QUICKSERV_CLIENT __client)
 {
     printf("Client connected to server\n");
     client = __client;
 }
 
 /* Callback when new data is received from clients */
-static void client_handler(SERVKIT_CLIENT __client, uint8_t *data, int len, void *arg)
+static void client_handler(QUICKSERV_CLIENT __client, uint8_t *data, int len, void *arg)
 {
     /* XXX: NOT IMPLEMENTED: we don't accept requests from client ATM. */
 }
 
-/* Send an actual message throug servkit if client is connected */
+/* Send an actual message throug quickserv if client is connected */
 static void server_send_notification(char *msg)
 {
     int ret = 0;
     if (client) {
-        ret = servkit_server_send_raw(server, client, (uint8_t *)msg, strlen(msg));
+        ret = quickserv_server_send(server, client, (uint8_t *)msg, strlen(msg));
         if (ret == strlen(msg)) {
             dbg("INFO: Sent notification to client: SUCCESS\n");
         } else {
@@ -222,23 +222,23 @@ int main(int argc, char * const argv[])
         exit(255);
     }
 
-    /* Initialize servkit */
-    servkit_init();
+    /* Initialize quickserv */
+    quickserv_init();
 
-    /* Open servkit-server */
-    server = servkit_server_open(server_path, client_handler, NULL);
+    /* Open quickserv-server */
+    server = quickserv_server_open(server_path, client_handler, NULL);
     if (server) {
         dbg("Open server succesfully at: %s\n", server_path);
     }
 
     /* Install callback to capture new connections */
-    servkit_server_install_connect_cb(server, client_accept);
+    quickserv_server_install_connect_cb(server, client_accept);
 
     /* Trigger measurement every 'timeout' seconds */
-    servkit_addtimer(1000 * poll_timeout, SERVKIT_TIMER_RETRIGGER, measure, NULL);
+    quickserv_addtimer(1000 * poll_timeout, QUICKSERV_TIMER_RETRIGGER, measure, NULL);
 
     /* Enter libevquick event loop */
-    servkit_loop();
+    quickserv_loop();
 
     /* Cleanup resources required for MCP3008 */
     mcp3008_stop();

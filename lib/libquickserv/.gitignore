@@ -1,0 +1,9 @@
+tags
+*.o
+*.swp
+*.swo
+*.swn
+.DS_Store
+build
+app
+

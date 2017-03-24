@@ -6,76 +6,55 @@
 #include <fcntl.h>
 #include "libevquick.h"
 
-/* Servkit */
-#include "servkit.h"
+/* Libquickserv */
+#include "libquickserv.h"
 
-#ifdef DBG_SERVKIT
+#ifdef DBG_QUICKSERV
     #define dbg printf
 #else
     #define dbg(...)
 #endif
 
-#define SERVKIT_FLAGMASK        (0x4000)     // 0b0100000000000000
+#define QUICKSERV_FLAGMASK (0x4000)
 
-// Message types
-#define SERVKIT_TYPE_DATA       (0)
-#define SERVKIT_TYPE_LOGIN      (1)
-#define SERVKIT_TYPE_COMMAND    (2)
-
-// Commands
-#define SERVKIT_CMD_SHUTDOWN    (0xFFFF)
-
-PACKED_STRUCT_DEF servkit_msg {
-    uint16_t type;
-    union servkit_contents {
-        struct servkit_data {
-            uint16_t len;
-            uint8_t buf[0];
-        } data;
-        struct servkit_login {
-            uint16_t len;
-            uint8_t buf[0];
-        } login;
-        struct servkit_command {
-            uint16_t cmd;
-        } command;
-    } contents;
-};
-
-struct servkit_client_s {
+/* Quickserv client */
+struct quickserv_client_s
+{
     int iface;
-    SERVKIT_SERVER server;
+    QUICKSERV_SERVER server;
 };
 
-struct servkit_server_s {
+/* Quickserv server */
+struct quickserv_server_s
+{
     uint16_t num_clients;
-    servkit_client_handler_cb client_handler;
-    servkit_client_accept_cb accept_handler;
-    servkit_server_error_cb error_handler;
-    SERVKIT_CLIENT client; /* TODO: For now only 1 client is supported, update to list of clients */
+    quickserv_client_handler_cb client_handler;
+    quickserv_client_accept_cb accept_handler;
+    quickserv_server_error_cb error_handler;
+    QUICKSERV_CLIENT client; /* TODO: For now only 1 client is supported, update to list of clients */
     void *arg;
 };
 
 /* For transmitting packets */
-static uint8_t pktbuf[SERVKIT_SIZE_MAX];
+static uint8_t pktbuf[QUICKSERV_SIZE_MAX];
 
 /**************************************************************************************************
  * Servkit
  **************************************************************************************************/
 
-void servkit_init(void)
+void quickserv_init(void)
 {
     evquick_init();
 }
 
-void servkit_loop(void)
+void quickserv_loop(void)
 {
     evquick_loop();
 }
 
-void servkit_addtimer(time_t interval, short flags, void (*callback)(void *arg), void *arg)
+void quickserv_addtimer(time_t interval, short flags, void (*callback)(void *arg), void *arg)
 {
-    evquick_addtimer(interval, flags & SERVKIT_FLAGMASK, callback, arg);
+    evquick_addtimer(interval, flags & QUICKSERV_FLAGMASK, callback, arg);
 }
 
 /**************************************************************************************************
@@ -84,47 +63,30 @@ void servkit_addtimer(time_t interval, short flags, void (*callback)(void *arg),
 
 static void server_error(void *arg)
 {
-    SERVKIT_SERVER server = (SERVKIT_SERVER)arg;
+    QUICKSERV_SERVER server = (QUICKSERV_SERVER)arg;
     if (server->error_handler) {
         server->error_handler(server);
-    }
-}
-
-/* Parse message received from client */
-static void server_parse_cmd(void *cmd, SERVKIT_CLIENT src)
-{
-    struct servkit_msg *msg = cmd;
-    switch (ntohs(msg->type)) {
-        case SERVKIT_TYPE_DATA:
-            /* Deliver to application */
-            src->server->client_handler(src, msg->contents.data.buf, ntohs(msg->contents.data.len), src->server->arg);
-            break;
-        case SERVKIT_TYPE_LOGIN:
-            break;
-        case SERVKIT_TYPE_COMMAND:
-        default:
-            fprintf(stderr, "Unknown message type\n");
     }
 }
 
 /* Read-callback for client socket */
 static void client_read(int fd, short revents, void *arg)
 {
-    char cmd[SERVKIT_SIZE_MAX];
+    QUICKSERV_CLIENT src = (QUICKSERV_CLIENT)arg;
+    char data[QUICKSERV_SIZE_MAX];
     int ret = 0;
 
-    ret = read(fd, cmd, (size_t)SERVKIT_SIZE_MAX);
+    ret = read(fd, data, (size_t)QUICKSERV_SIZE_MAX);
     if (ret > 0) {
-        cmd[ret] = (char)0;
-        server_parse_cmd(cmd, (SERVKIT_CLIENT)arg);
+        src->server->client_handler(src, (uint8_t *)data, ret, src->server->arg);
     }
 }
 
 /* Error-callback for client socket */
 static void client_error(int fd, short revents, void *arg)
 {
-    SERVKIT_CLIENT client = (SERVKIT_CLIENT)arg;
-    SERVKIT_SERVER self = client->server;
+    QUICKSERV_CLIENT client = (QUICKSERV_CLIENT)arg;
+    QUICKSERV_SERVER self = client->server;
     fprintf(stderr, "Client closed connection\n");
     close(fd);
     self->num_clients--;
@@ -134,9 +96,9 @@ static void client_error(int fd, short revents, void *arg)
 }
 
 /* Setup server-client interface */
-static void serve_client(SERVKIT_SERVER server, int fd)
+static void serve_client(QUICKSERV_SERVER server, int fd)
 {
-    SERVKIT_CLIENT new = NULL;
+    QUICKSERV_CLIENT new = NULL;
 
     dbg("Serving new client...\n");
 
@@ -146,7 +108,7 @@ static void serve_client(SERVKIT_SERVER server, int fd)
         return;
     }
 
-    new = (SERVKIT_CLIENT)malloc(sizeof(struct servkit_client_s));
+    new = (QUICKSERV_CLIENT)malloc(sizeof(struct quickserv_client_s));
     if (!new) {
         return;
     } else {
@@ -175,7 +137,7 @@ static void connect_accept(int fd, short revents, void *arg)
 
     conn_fd = accept(fd, (struct sockaddr *)&client, &socklen);
     if (conn_fd >= 0) {
-        serve_client((SERVKIT_SERVER)arg, conn_fd);
+        serve_client((QUICKSERV_SERVER)arg, conn_fd);
     }
 }
 
@@ -187,9 +149,9 @@ static void connect_error(int fd, short revents, void *arg)
 }
 
 // Open a server instance at a certain path
-SERVKIT_SERVER servkit_server_open(const char *path, servkit_client_handler_cb handler, void *arg)
+QUICKSERV_SERVER quickserv_server_open(const char *path, quickserv_client_handler_cb handler, void *arg)
 {
-    SERVKIT_SERVER server = (SERVKIT_SERVER)malloc(sizeof(struct servkit_server_s));
+    QUICKSERV_SERVER server = (QUICKSERV_SERVER)malloc(sizeof(struct quickserv_server_s));
     struct sockaddr_un socket_server;
     int s_server;
 
@@ -222,25 +184,14 @@ SERVKIT_SERVER servkit_server_open(const char *path, servkit_client_handler_cb h
 }
 
 // Send from a server to a particular client
-int servkit_server_send(SERVKIT_SERVER server, SERVKIT_CLIENT client, uint8_t *data, int len)
-{
-    struct servkit_msg *msg = (struct servkit_msg *)pktbuf;
-    msg->type = htons(SERVKIT_TYPE_DATA);
-    msg->contents.data.len = htons(len);
-    memcpy(msg->contents.data.buf, data, len);
-    return write(client->iface, pktbuf, SERVKIT_SIZE_MAX);
-}
-
-// If client is not a Servkit-client there is a chance (99%) that it doesn't support the Servkit
-// message format, therefor this function can send RAW data without the Servkit message format.
-int servkit_server_send_raw(SERVKIT_SERVER server, SERVKIT_CLIENT client, uint8_t *data, int len)
+int quickserv_server_send(QUICKSERV_SERVER server, QUICKSERV_CLIENT client, uint8_t *data, int len)
 {
     memcpy(pktbuf, data, len);
     return write(client->iface, pktbuf, len);
 }
 
 // Install a callback-function for detecting new connections with clients
-int servkit_server_install_connect_cb(SERVKIT_SERVER server, servkit_client_accept_cb handler)
+int quickserv_server_install_connect_cb(QUICKSERV_SERVER server, quickserv_client_accept_cb handler)
 {
     if (server) {
         server->accept_handler = handler;
@@ -250,7 +201,7 @@ int servkit_server_install_connect_cb(SERVKIT_SERVER server, servkit_client_acce
 }
 
 // Install a callback-function for catching errors
-int servkit_server_install_error_cb(SERVKIT_SERVER server, servkit_server_error_cb handler)
+int quickserv_server_install_error_cb(QUICKSERV_SERVER server, quickserv_server_error_cb handler)
 {
     if (server) {
         server->error_handler = handler;
@@ -264,13 +215,13 @@ int servkit_server_install_error_cb(SERVKIT_SERVER server, servkit_server_error_
  **************************************************************************************************/
 
 // Connect a client to a server at a particular path
-SERVKIT_CLIENT servkit_client_connect(const char *path, servkit_server_handler_cb handler)
+QUICKSERV_CLIENT quickserv_client_connect(const char *path, quickserv_server_handler_cb handler)
 {
     return NULL;
 }
 
 // Send from a client to it's connected server
-int servkit_client_send(SERVKIT_CLIENT client, uint8_t *data, int len)
+int quickserv_client_send(QUICKSERV_CLIENT client, uint8_t *data, int len)
 {
     return 0;
 }
