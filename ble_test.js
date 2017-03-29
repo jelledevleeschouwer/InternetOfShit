@@ -64,9 +64,4 @@ bleno.on('disconnect', function(clientAddress) {
     console.log('on -> disconnect: Client disconnected: ' + clientAddress);
 })
 
-bleno.on('stateChange', function(state) {
-    console.log('BLE stateChange to: ' + state);
-    if (state == 'poweredOn') {
-        bleno.startAdvertising('Raspberry', [ primaryService.uuid ]);
-    }
-});
+

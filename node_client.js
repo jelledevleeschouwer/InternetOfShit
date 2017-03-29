@@ -1,16 +1,25 @@
 #!/usr/bin/env node
 
 /**
- *  Requirements
+ *  Dependencies
  **/
 var bleno = require('/usr/local/lib/node_modules/bleno');
 var exec = require('child_process').exec;
 var program = require('commander');
+var toilet = require('toilet');
 var net = require('net');
+
+/**
+ *  Types
+ **/
+var Descriptor = bleno.Descriptor;
+var ShittyService = require('shittyservice');
 
 /**
  *  Constants
  **/
+const device_name = "InternetOfShit"
+
 const servo_flush = 0;  // BCM17 / pin11
 const servo_locker = 1; // BCM18 / pin12
 const servo_aroma = 2;  // BCM27 / pin13
@@ -23,9 +32,13 @@ var client;
 
 /* Internet-of-shit related */
 var toilet_occupied = false;
+var toilet_locked = false;
 var paper_available = false;
 var paper_occupied = false;
 var computed_flow = 0;
+
+var toilet = new Toilet(100, 2);
+var shittyService = new ShittyService(toilet);
 
 /* Configuration parameters */
 var preferred_aroma = 0;
@@ -33,7 +46,7 @@ var preferred_flow = 0;
 
 /* First thing, parse command-line options */
 program
-    .version('0.0.1')
+    .version('0.1')
     .option('-f, --filepath [path]', 'Path to server socket')
     .parse(process.argv);
 
@@ -59,6 +72,10 @@ function toilet_seat_notify(var value)
 {
     var occupied = value == 1 ? true : false;
 
+    if (toilet_locked) { // Can't do anything with toilet if locked, supply toilet paper to unlock
+        return;
+    }
+
     if (toilet_occupied && !occupied) { // Toilet was occupied, but not anymore
         toilet_occupied = occupied;
         /* Diffuse prefered aroma */
@@ -77,6 +94,8 @@ function toilet_seat_notify(var value)
         console.log("ERROR: Server should only notify on changes of pressuress\n");
         process.exit();
     }
+
+    shittyService.notifyOccupation(toilet_occupied);
 }
 
 /* Notify change in toilet paper pressure */
@@ -92,20 +111,65 @@ function toilet_paper_notify(var value)
     if (paper_available && !available) { // Paper was available, but not anymore
         paper_available = available;
         toilet_lock();
+        toilet_locked = true;
     } else if (!paper_available && available) { // Paper was not available, but now is
         paper_available = available;
         toilet_unlock();
+        toilet_locked = false;
     } else {
-        console.log("ERROR: Server should only notify on changes of pressuress\n");
+        console.log("ERROR: Server should only notify on changes of pressuress");
         process.exit();
     }
+
+    shittyService.notifyPaper(paper_available);
 }
 
 /*********************************************************************************
  *  Interface with BLE and Android-app
  *********************************************************************************/
 
-/* TODO: Provide BLE interface */
+// Services
+var services = [ shittyService ];
+
+// For setting Bleno Services
+bleno.on('servicesSet', function(error)
+{
+    console.log('on -> servicesSet: ' + (error ? 'error ' + error : 'success'));
+});
+
+// When advertising succeeded, set advertising services
+bleno.on('advertisingStart', function(error) {
+    console.log('on -> advertisingStart: ' + (error ? 'error ' + error : 'success'));
+
+    if (!error) {
+        bleno.setServices( services, function(error) {
+            console.log('setServices: '  + (error ? 'error ' + error : 'success'));
+        });
+    }
+});
+
+// Accepting new clients
+bleno.on('accept', function(clientAddress)
+{
+    console.log('on -> accept: Client connected: ' + clientAddress);
+});
+
+// Disconnecting clients
+bleno.on('disconnect', function(clientAddress)
+{
+    console.log('on -> disconnect: Client disconnected: ' + clientAddress);
+});
+
+bleno.on('stateChange', function(state)
+{
+    console.log('on -> stateChange: ' + state);
+    if (state == 'poweredOn') {
+        bleno.startAdvertising(device_name, [ shittyService.uuid ]);
+    } else {
+        console.log("ERROR: Could not turn on BLE-interface, not able to recover");
+        process.exit();
+    }
+});
 
 /*********************************************************************************
  *  Interface with Weather API and
@@ -118,7 +182,8 @@ function toilet_paper_notify(var value)
  *********************************************************************************/
 
 /* Connect to ADC-server */
-function init_adc() {
+function init_adc()
+{
     client = net.createConnection(server_path);
 }
 
