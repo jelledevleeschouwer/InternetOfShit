@@ -3,17 +3,19 @@
 /**
  *  Dependencies
  **/
-var bleno = require('/usr/local/lib/node_modules/bleno');
+const node_modules = '/usr/local/lib/node_modules/'
+var bleno = require(node_modules + 'bleno');
+var program = require(node_modules + 'commander.js');
+var ip = require(node_modules + 'ip');
 var exec = require('child_process').exec;
-var program = require('commander');
-var toilet = require('toilet');
 var net = require('net');
 
 /**
  *  Types
  **/
 var Descriptor = bleno.Descriptor;
-var ShittyService = require('shittyservice');
+var ShittyService = require('./shittyservice');
+var Toilet = require('./toilet')
 
 /**
  *  Constants
@@ -62,13 +64,16 @@ if (program.filepath) {
 /* Spawn servo-daemon process */
 init_servod();
 init_adc();
+init_api();
+
+test();
 
 /*********************************************************************************
  * Internet-of-shit logic
  *********************************************************************************/
 
 /* Notify change in toilet seat pressure */
-function toilet_seat_notify(var value)
+function toilet_seat_notify(value)
 {
     var occupied = value == 1 ? true : false;
 
@@ -77,48 +82,47 @@ function toilet_seat_notify(var value)
     }
 
     if (toilet_occupied && !occupied) { // Toilet was occupied, but not anymore
+        console.log('InternetOfShit: Toilet: AVAILABLE');
         toilet_occupied = occupied;
         /* Diffuse prefered aroma */
-        aroma_diffuser(preferred_aroma);
+        aroma_diffuser(toilet.aroma());
         /* Flush the toilet */
-        toilet_flush(preferred_flow * computed_flow)
+        toilet_flush(toilet.waterFlow() * toilet.compensation())
         /* Close the toilet seat */
         toilet_close();
         /* Check temporary paper_available-flag */
-        if (paper_available != paper_occupied)
+        if (paper_occupied)
             toilet_paper_notify(paper_occupied);
     } else if (!toilet_occupied && occupied) { // Toilet was not occupied, but now is
+        console.log('InternetOfShit: Toilet: OCCUPIED');
         toilet_occupied = occupied;
-        /* Perform API-call for latest rainfall-data */
     } else {
         console.log("ERROR: Server should only notify on changes of pressuress\n");
-        process.exit();
     }
 
     shittyService.notifyOccupation(toilet_occupied);
 }
 
 /* Notify change in toilet paper pressure */
-function toilet_paper_notify(var value)
+function toilet_paper_notify(value)
 {
     var available = value == 1 ? true : false;
+
+    console.log('Toilet occupied: ' + toilet_occupied);
+    console.log('Paper available: ' + available);
 
     if (toilet_occupied) { // Wait with updating paper_available until person is gone
         paper_occupied = available;
         return;
-    }
-
-    if (paper_available && !available) { // Paper was available, but not anymore
-        paper_available = available;
-        toilet_lock();
-        toilet_locked = true;
-    } else if (!paper_available && available) { // Paper was not available, but now is
-        paper_available = available;
-        toilet_unlock();
-        toilet_locked = false;
     } else {
-        console.log("ERROR: Server should only notify on changes of pressuress");
-        process.exit();
+        if (available) {
+            paper_occupied = false;
+            toilet_unlock();
+            toilet_locked = false;
+        } else {
+            toilet_lock();
+            toilet_locked = true;
+        }
     }
 
     shittyService.notifyPaper(paper_available);
@@ -171,11 +175,30 @@ bleno.on('stateChange', function(state)
     }
 });
 
+/* // XXX: TEST
+var toggle = false;
+setInterval(function() {
+    toggle = !toggle;
+    shittyService.notifyOccupation(toggle);
+    shittyService.notifyPaper(toggle);
+}, 6000);
+*/
+
 /*********************************************************************************
  *  Interface with Weather API and
  *********************************************************************************/
 
-/* TODO: Provide API interface */
+function init_api()
+{
+    toilet.refreshPrecipitation();
+}
+
+function test()
+{
+    console.log('My ip: ' + ip.address('eth0'));
+    toilet.compensation();
+    toilet.precipitation();
+}
 
 /*********************************************************************************
  *  Interface with ADC and toilet-seat and toilet paper
@@ -203,9 +226,9 @@ client.on("data", function(data) {
     JSON.parse(data.toString('utf8'), (key, value) => {
         if (key.length != 0) {
             if (key == 'SEAT') {
-                console.log("Seat: " + value);
+                toilet_seat_notify(value);
             } else if (key == 'PAPER') {
-                console.log("Paper: " + value);
+                toilet_paper_notify(value);
             } else {
                 console.log("ERROR: Unkown key received from server" + key);
             }
@@ -223,7 +246,6 @@ client.on("data", function(data) {
 function init_servod()
 {
 	cmd = 'sudo servod --p1pins=11,12,13';
-	console.log(cmd);
 	exec(cmd,
 	    (error, stdout, stderr) => {
 	        if (error !== null) {
@@ -274,37 +296,41 @@ function parse(str)
 
 function toilet_flush(water_flow)
 {
+    const max_flow = 50;
     console.log("Flushing toilet with flow of: " + water_flow);
+    water_flow = (water_flow / 100) * max_flow;
 	servo_controller(servo_flush, water_flow);
 	servo_controller(servo_flush, 5);
 }
 
 function aroma_diffuser(aroma_id)
 {
-	if( aroma_id == 1 ) {
+	if (aroma_id == 1) {
 		servo_controller(servo_aroma, 5);
-	} else if( aroma_id ==2 ) {
+	} else if (aroma_id == 2) {
 		servo_controller(servo_aroma, 95);
 	} else {
 		console.log('ERROR: aroma_id should be 1 or 2 !!!')
 	}
+
 	servo_controller(servo_aroma, 50);
 }
 
 function toilet_close()
 {
-	servo_controller(servo_locker, 95);
 	servo_controller(servo_locker, 5);
+	servo_controller(servo_locker, 95);
 }
 
 function toilet_lock()
 {
     console.log("Internet of shit lock: ON");
-	servo_controller(servo_locker, 95);
+	servo_controller(servo_locker, 5);
 }
 
 function toilet_unlock()
 {
     console.log("Internet of shit lock: OFF");
-	servo_controller(servo_locker, 5);
+	servo_controller(servo_locker, 95);
 }
+

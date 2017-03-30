@@ -15,8 +15,8 @@ var Descriptor = bleno.Descriptor;
  **/
 var Characteristic_Waterflow = function(toilet)
 {
-    Characterisitc_Waterflow = super_.call(this, {
-        uuid := 'fff0',
+    Characteristic_Waterflow.super_.call(this, {
+        uuid : '0000000000000000000000000000fff0',
         properties: [ 'write' ],
         value: null,
         descriptors: [

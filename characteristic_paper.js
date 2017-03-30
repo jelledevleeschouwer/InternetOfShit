@@ -15,8 +15,8 @@ var Descriptor = bleno.Descriptor;
  **/
 var Characteristic_Paper = function(toilet)
 {
-    Characterisitc_Paper = super_.call(this, {
-        uuid := 'fff4',
+    Characteristic_Paper.super_.call(this, {
+        uuid : '0000000000000000000000000000fff4',
         properties: [ 'read', 'notify' ],
         value: null,
         descriptors: [
@@ -27,17 +27,18 @@ var Characteristic_Paper = function(toilet)
         ]
     });
 
-    this._value = new Buffer(0);
+    this._value = new Buffer(1);
+    this._value.writeUInt8(0,0);
     this._updateValueCallback = null;
     this.toilet = toilet;
 }
 
 util.inherits(Characteristic_Paper, Characteristic);
 
-Characteristic_Paper.prototype.notifyPaper = function(occupation)
+Characteristic_Paper.prototype.notifyPaper = function(available)
 {
     if (this._updateValueCallback) {
-        this._value = new Buffer(occupation);
+        this._value.writeUInt8((available ? 1 : 0), 0);
         this._updateValueCallback(this._value);
     }
 }

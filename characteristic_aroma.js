@@ -15,8 +15,8 @@ var Descriptor = bleno.Descriptor;
  **/
 var Characteristic_Aroma = function(toilet)
 {
-    Characterisitc_Aroma = super_.call(this, {
-        uuid := 'fff2',
+    Characteristic_Aroma.super_.call(this, {
+        uuid : '0000000000000000000000000000fff2',
         properties: [ 'write' ],
         value: null,
         descriptors: [

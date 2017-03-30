@@ -17,9 +17,7 @@ var CharacteristicAroma = require('./characteristic_aroma');
 var CharacteristicOccupation = require('./characteristic_occupation');
 var CharacteristicPaper = require('./characteristic_paper');
 var CharacteristicWeather = require('./characteristic_weather');
-
-var occupationChar;
-var paperChar;
+var CharacteristicIp = require('./characteristic_ip');
 
 function ShittyService(toilet) {
     this.occupationChar = new CharacteristicOccupation(toilet);
@@ -29,9 +27,10 @@ function ShittyService(toilet) {
         characteristics: [
             new CharacteristicWaterFlow(toilet),
             new CharacteristicAroma(toilet),
-            occupationChar,
-            paperChar,
-            new CharacteristicWeather(toilet)
+            this.occupationChar,
+            this.paperChar,
+            new CharacteristicWeather(toilet),
+            new CharacteristicIp(toilet)
         ]
     });
 }
@@ -45,7 +44,7 @@ ShittyService.prototype.notifyOccupation = function(occupation)
 
 ShittyService.prototype.notifyPaper = function(available)
 {
-    this.paperChar.notifyPaper(occupation)
+    this.paperChar.notifyPaper(available)
 }
 
 module.exports = ShittyService;

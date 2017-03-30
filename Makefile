@@ -52,3 +52,16 @@ clean:
 run:
 	@echo "\n\nStarting application..."
 	@sudo ./app
+
+node:
+	@sudo npm install -g commander ip request dateformat
+
+install:
+	@sudo cp -f shitstart /etc/init.d
+	@sudo ln -fs /etc/init.d/shitstart /etc/rc3.d/S01shitstart
+	@update-rc.d shitstart defaults
+	@sudo cp -f characteristic_*.js /usr/local/sbin/
+	@sudo cp -f *service*.js /usr/local/sbin/
+	@sudo cp -f toilet.js /usr/local/sbin/
+	@sudo chmod +x node_client.js
+	@sudo cp -f node_client.js /usr/local/sbin/shitapp

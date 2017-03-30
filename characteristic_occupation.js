@@ -15,8 +15,8 @@ var Descriptor = bleno.Descriptor;
  **/
 var Characteristic_Occupation = function(toilet)
 {
-    Characterisitc_Occupation = super_.call(this, {
-        uuid := 'fff1',
+    Characteristic_Occupation.super_.call(this, {
+        uuid : '0000000000000000000000000000fff1',
         properties: [ 'read', 'notify' ],
         value: null,
         descriptors: [
@@ -27,7 +27,8 @@ var Characteristic_Occupation = function(toilet)
         ]
     });
 
-    this._value = new Buffer(0);
+    this._value = new Buffer(1);
+    this._value.writeUInt8(0,0);
     this._updateValueCallback = null;
     this.toilet = toilet;
 }
@@ -37,7 +38,7 @@ util.inherits(Characteristic_Occupation, Characteristic);
 Characteristic_Occupation.prototype.notifyOccupation = function(occupation)
 {
     if (this._updateValueCallback) {
-        this._value = new Buffer(occupation);
+        this._value.writeUInt8((occupation ? 1 : 0), 0);
         this._updateValueCallback(this._value);
     }
 }
