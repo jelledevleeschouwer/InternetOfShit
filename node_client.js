@@ -108,9 +108,6 @@ function toilet_paper_notify(value)
 {
     var available = value == 1 ? true : false;
 
-    console.log('Toilet occupied: ' + toilet_occupied);
-    console.log('Paper available: ' + available);
-
     if (toilet_occupied) { // Wait with updating paper_available until person is gone
         paper_occupied = available;
         return;
@@ -297,7 +294,7 @@ function parse(str)
 function toilet_flush(water_flow)
 {
     const max_flow = 50;
-    console.log("Flushing toilet with flow of: " + water_flow);
+    console.log("Flushing toilet with flow of: " + water_flow + "%");
     water_flow = (water_flow / 100) * max_flow;
 	servo_controller(servo_flush, water_flow);
 	servo_controller(servo_flush, 5);

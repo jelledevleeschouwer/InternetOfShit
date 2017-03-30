@@ -32,7 +32,7 @@ var Characteristic_Waterflow = function(toilet)
 
 util.inherits(Characteristic_Waterflow, Characteristic);
 
-Characteristic_Waterflow.prototype.onWriteRequest = function(data, offset, withoutResponse)
+Characteristic_Waterflow.prototype.onWriteRequest = function(data, offset, withoutResponse, callback)
 {
     if (offset) {
         callback(this.RESULT_ATTR_NOT_LONG);

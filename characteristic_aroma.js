@@ -32,13 +32,14 @@ var Characteristic_Aroma = function(toilet)
 
 util.inherits(Characteristic_Aroma, Characteristic);
 
-Characteristic_Aroma.prototype.onWriteRequest = function(data, offset, withoutResponse)
+Characteristic_Aroma.prototype.onWriteRequest = function(data, offset, withoutResponse, callback)
 {
     if (offset) {
         callback(this.RESULT_ATTR_NOT_LONG);
     } else if (data.length !== 1) {
         callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
     } else {
+        console.log('Received data from App: ' + data.toString('hex'))
         var value = data.readUInt8(0);
         this.toilet.setAroma(value);
         callback(this.RESULT_SUCCESS);

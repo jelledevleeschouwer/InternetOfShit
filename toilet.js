@@ -33,10 +33,12 @@ function Toilet(waterflow, capacity)
 Toilet.prototype._validateNumber = function(number, name, min, max)
 {
     if (typeof number !== 'number') {
+        console.log(name + ' must be a number');
         throw new Error(name + ' must be a number');
     }
 
     if (number < min || number > max) {
+        console.log(name + ' must be between ' + min + ' and ' + max);
         throw new Error(name + ' must be between ' + min + ' and ' + max);
     }
 };
@@ -45,6 +47,7 @@ Toilet.prototype.setWaterFlow = function(waterflow)
 {
     this._validateNumber(waterflow,'waterflow', 0, 100);
     _waterflow = waterflow;
+    console.log('Set waterflow to: ' + waterflow + '%');
 };
 
 Toilet.prototype.waterFlow = function()
@@ -56,6 +59,7 @@ Toilet.prototype.setAroma = function(aroma)
 {
     this._validateNumber(aroma, 'aroma', 0, 1);
     _aroma = aroma;
+    console.log('Set aroma to: ' + aroma + '%');
 }
 
 Toilet.prototype.aroma = function()
