@@ -122,7 +122,7 @@ function toilet_paper_notify(value)
         }
     }
 
-    shittyService.notifyPaper(paper_available);
+    shittyService.notifyPaper(available);
 }
 
 /*********************************************************************************
@@ -172,15 +172,6 @@ bleno.on('stateChange', function(state)
     }
 });
 
-/* // XXX: TEST
-var toggle = false;
-setInterval(function() {
-    toggle = !toggle;
-    shittyService.notifyOccupation(toggle);
-    shittyService.notifyPaper(toggle);
-}, 6000);
-*/
-
 /*********************************************************************************
  *  Interface with Weather API and
  *********************************************************************************/
@@ -193,8 +184,8 @@ function init_api()
 function test()
 {
     console.log('My ip: ' + ip.address('eth0'));
-    toilet.compensation();
-    toilet.precipitation();
+//    toilet.compensation();
+//    toilet.precipitation();
 }
 
 /*********************************************************************************

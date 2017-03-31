@@ -35,11 +35,12 @@ util.inherits(Characteristic_Aroma, Characteristic);
 Characteristic_Aroma.prototype.onWriteRequest = function(data, offset, withoutResponse, callback)
 {
     if (offset) {
+        console.log('Received WRITE for \'ATTR_LONG\', offset:' + offset);
         callback(this.RESULT_ATTR_NOT_LONG);
     } else if (data.length !== 1) {
+        console.log('Received WRITE with \'INVALID_ATTRIBUTE_LENGTH\', length:' + data.length);
         callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
     } else {
-        console.log('Received data from App: ' + data.toString('hex'))
         var value = data.readUInt8(0);
         this.toilet.setAroma(value);
         callback(this.RESULT_SUCCESS);

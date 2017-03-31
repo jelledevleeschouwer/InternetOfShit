@@ -37,6 +37,7 @@ util.inherits(Characteristic_Ip, Characteristic);
 Characteristic_Ip.prototype.onReadRequest = function(offset, callback)
 {
     if (offset) {
+        console.log('Received READ for \'ATTR_LONG:\'' + offset);
         callback(this.RESULT_ATTR_NOT_LONG);
     } else {
         const buf = new Buffer(4);

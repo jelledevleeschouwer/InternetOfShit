@@ -37,8 +37,8 @@ util.inherits(Characteristic_Paper, Characteristic);
 
 Characteristic_Paper.prototype.notifyPaper = function(available)
 {
+    this._value.writeUInt8((available ? 1 : 0), 0);
     if (this._updateValueCallback) {
-        this._value.writeUInt8((available ? 1 : 0), 0);
         this._updateValueCallback(this._value);
     }
 }
@@ -46,6 +46,7 @@ Characteristic_Paper.prototype.notifyPaper = function(available)
 Characteristic_Paper.prototype.onReadRequest = function(offset, callback)
 {
     if (offset) {
+        console.log('Received READ for \'ATTR_LONG:\'' + offset);
         callback(this.RESULT_ATTR_NOT_LONG);
     } else {
         console.log('CharacteristicPaper - onReadRequest: value = ' + this._value.toString('hex'));

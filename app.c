@@ -56,7 +56,6 @@ static QUICKSERV_CLIENT client = NULL;
 /* Callback when new client is accepted */
 static void client_accept(QUICKSERV_CLIENT __client)
 {
-    measure(NULL);
     printf("Client connected to server\n");
     client = __client;
 }

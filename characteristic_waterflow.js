@@ -35,8 +35,10 @@ util.inherits(Characteristic_Waterflow, Characteristic);
 Characteristic_Waterflow.prototype.onWriteRequest = function(data, offset, withoutResponse, callback)
 {
     if (offset) {
+        console.log('Received WRITE for \'ATTR_LONG:\'' + offset);
         callback(this.RESULT_ATTR_NOT_LONG);
     } else if (data.length !== 1) {
+        console.log('Received WRITE with \'INVALID_ATTRIBUTE_LENGTH:\'' + data.length);
         callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
     } else {
         var value = data.readUInt8(0);

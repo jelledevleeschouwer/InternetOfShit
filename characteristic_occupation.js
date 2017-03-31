@@ -37,8 +37,8 @@ util.inherits(Characteristic_Occupation, Characteristic);
 
 Characteristic_Occupation.prototype.notifyOccupation = function(occupation)
 {
+    this._value.writeUInt8((occupation ? 1 : 0), 0);
     if (this._updateValueCallback) {
-        this._value.writeUInt8((occupation ? 1 : 0), 0);
         this._updateValueCallback(this._value);
     }
 }
@@ -46,6 +46,7 @@ Characteristic_Occupation.prototype.notifyOccupation = function(occupation)
 Characteristic_Occupation.prototype.onReadRequest = function(offset, callback)
 {
     if (offset) {
+        console.log('Received READ for \'ATTR_LONG:\'' + offset);
         callback(this.RESULT_ATTR_NOT_LONG);
     } else {
         console.log('CharacteristicOccupation - onReadRequest: value = ' + this._value.toString('hex'));
